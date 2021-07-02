@@ -13,9 +13,10 @@ import {
   TextField,
   Typography 
 } from '@material-ui/core'
-import CloseIcon from '@material-ui/icons/Close';
-import { makeStyles } from '@material-ui/core/styles';
+import CloseIcon from '@material-ui/icons/Close'
+import { makeStyles } from '@material-ui/core/styles'
 
+import SuccessPopup from './SuccessPopup'
 import ErrorPopup from '@components/ErrorPopup'
 
 const useStyles = makeStyles((theme) => ({
@@ -33,14 +34,15 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.up('md')]: {
       height: 'max-content',
       width: 'max-content',
-      minWidth: theme.spacing(50),
+      minWidth: theme.spacing(72),
       maxHeight: '90%',
       overflowY: 'scroll',
     },
   },
   content: {
     display: 'flex',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    paddingBottom: theme.spacing(2),
   },
   fields: {
     display: 'flex',
@@ -65,6 +67,10 @@ const useStyles = makeStyles((theme) => ({
   },
   textField: {
     width: '100%',
+    "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": {
+      "-webkit-appearance": "none",
+      margin: 0
+    }
   },
   list: {
     display: 'flex',
@@ -79,26 +85,47 @@ const useStyles = makeStyles((theme) => ({
 // Presentational component for handling trades
 const TradePopup = (props) => {
   const classes = useStyles();
-  const { open, onClose, daiBalance, coverage, premium, expiry, buyCover, sellCover } = props;
+  const { open, onClose, daiBalance, coverBalance, premBalance, totalCoverage, totalPremium, expiry, buyCover, sellCover } = props;
   const [tab, setTab] = useState(0);
+  const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
+  const [priceInput, setPriceInput] = useState<string>();
+  const [priceOutput, setPriceOutput] = useState<string>();
   const quantityRef = useRef<HTMLInputElement>();
   const costRef = useRef<HTMLInputElement>();
 
-  // TODO: Update costRef when quantityRef is changed by user input
   useEffect(() => {
-  }, [quantityRef?.current?.value])
-  useEffect(() => {
-  }, [costRef?.current?.value])
+    // Reset
+    setPriceInput(undefined);
+    setPriceOutput(undefined);
+    setSuccessMessage('');
+    setError('');
+    setTab(0);
+  }, [open])
 
   // Function passed into 'onClick'
   const executeTrade = async () => {
-    if (tab === 0) {
-      await buyCover();
-    } else {
-      await sellCover();
-    };
-    onClose();
+    setError('');
+    let message = '';
+    try {
+      if (tab === 0) {
+        await buyCover(priceInput);
+        message = `You successfully exchanged ${priceInput} DAI for ${costRef.current.value} Cover tokens`;
+      } else {
+        await sellCover(priceInput);
+        message = `You successfully staked ${priceInput} DAI in exchange for ${costRef.current.value} Prem tokens`;
+      };
+    } catch (e) {
+      const err = JSON.stringify(JSON.stringify(e.message));
+      console.log('Error', err);
+      return setError(err);
+    }
+    
+    // Show success message for 2 seconds before closing popup
+    setSuccessMessage(message);
+    setTimeout(() => {
+      onClose();
+    }, 2000);
   }
 
   return (
@@ -118,28 +145,42 @@ const TradePopup = (props) => {
     >
       <DialogTitle>
         <Typography gutterBottom variant='h6'>
-          Trade Coverage
+          Maple 
+        </Typography>
+        <Typography gutterBottom variant='body2'>
+          { tab === 0
+            ?
+              'Buy COVER using DAI to get coverage if default event occurs'
+            :
+              'Stake DAI and earn PREM to get right to claim premiums if no default event occurs'
+          }
         </Typography>
       </DialogTitle>
       <div>
-        <div style={{ float: 'left', width: '30%'}}>
+        <div style={{ float: 'left', width: '40%'}}>
           <List disablePadding subheader={<li />} className={classes.list}>
             <div className={classes.listItem}>
               <Typography variant='body2'>Balance</Typography>
               <Typography variant='subtitle2'>
                 { daiBalance } DAI
               </Typography>
-            </div>
-            <div className={classes.listItem}>
-              <Typography variant='body2'>Coverage</Typography>
               <Typography variant='subtitle2'>
-                { coverage }
+                { coverBalance } Cover tokens
+              </Typography>
+              <Typography variant='subtitle2'>
+                { premBalance } Prem tokens
               </Typography>
             </div>
             <div className={classes.listItem}>
-              <Typography variant='body2'>Premium</Typography>
+              <Typography variant='body2'>Total Supplied Coverage</Typography>
               <Typography variant='subtitle2'>
-                { premium }
+                { totalCoverage }
+              </Typography>
+            </div>
+            <div className={classes.listItem}>
+              <Typography variant='body2'>Total Available Premium</Typography>
+              <Typography variant='subtitle2'>
+                { totalPremium }
               </Typography>
             </div>
             <div className={classes.listItem}>
@@ -150,11 +191,11 @@ const TradePopup = (props) => {
             </div>
           </List>
         </div>
-        <div style={{ float: 'right', width: '70%'}}>
+        <div style={{ float: 'right', width: '60%'}}>
           <div className={classes.content}>
             <Tabs indicatorColor="primary" value={tab} onChange={(e, val) => setTab(val)}>
-              <Tab disableRipple label="Buy" />
-              <Tab disableRipple label="Sell" />
+              <Tab disableRipple label="Buy Cover" />
+              <Tab disableRipple label="Stake" />
             </Tabs>
             <IconButton 
               aria-label="close" 
@@ -167,32 +208,48 @@ const TradePopup = (props) => {
           </div>
           <DialogContent>
             <Typography gutterBottom variant='subtitle2'>
-              Amount to Buy
+              Amount to  { tab === 0 ? 'Buy' : 'Stake' }
             </Typography>
             <TextField 
+              type='number'
               className={classes.textField} 
               placeholder={'0.0'}
               variant='outlined' 
               InputProps={{
-                endAdornment: <InputAdornment position="end">Coverage Tokens</InputAdornment>,
+                endAdornment: <InputAdornment position="end">{ tab === 0 ? 'COVER' : 'DAI' }</InputAdornment>,
+              }}
+              onChange={(e) => {
+                const val = `${Math.abs(+e.target.value)}`;
+                setPriceInput(val);
+                setPriceOutput(val); // TODO: replace this with COVER / PREM x DAI conversion
               }}
               inputRef={quantityRef}
             />
           </DialogContent>
           <DialogContent>
             <Typography gutterBottom variant='subtitle2'>
-              Cost
+              { tab === 0 ? 'Cost' : 'You will Receive' }
             </Typography>
             <TextField 
               disabled
               className={classes.textField} 
-              variant='outlined' 
               placeholder={'0.0'}
+              variant='outlined' 
+              value={priceOutput}
               InputProps={{
-                endAdornment: <InputAdornment position="end">DAI</InputAdornment>,
+                endAdornment: <InputAdornment position="end">{ tab === 0 ? 'DAI' : 'PREM' }</InputAdornment>,
               }}
               inputRef={costRef}
             />
+            <Typography variant='subtitle2'>
+             { tab === 0 
+              ? 
+                '1 COVER = 1 DAI' 
+              : 
+                '1 PREM = 1 DAI'
+              }
+              
+            </Typography>
           </DialogContent>
           <DialogActions>
             <Button 
@@ -200,12 +257,17 @@ const TradePopup = (props) => {
               color='primary' 
               variant='contained'
               onClick={executeTrade}
+              disabled={!priceInput || priceInput === '0'}
             >
-              { tab === 0 ? 'Buy' : 'Sell' } {' Coverage'}
+              { tab === 0 ? 'Buy Cover' : 'Stake' }
             </Button> 
           </DialogActions>
         </div>
       </div>
+      <SuccessPopup
+        handleClose={() => setSuccessMessage('')}
+        message={successMessage}
+      />
       <ErrorPopup
         error={error}
         handleCloseError={() => setError('')}

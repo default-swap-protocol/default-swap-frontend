@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useMoralis } from 'react-moralis'
+import { formatUnits } from "@ethersproject/units";
 import { useAccount } from '@contexts/AccountContext'
 import { Button, Container } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles'
@@ -45,18 +46,20 @@ const useStyles = makeStyles((theme) => ({
 // Table of coverage pools
 const Pools = () => {
   const classes = useStyles();
-  const { getDaiBalance } = useAccount();
+  const { getDaiBalance, getCoverBalance, getPremBalance, updateBalances } = useAccount();
   const [error, setError] = useState('');
   const { web3, enableWeb3, isWeb3Enabled, web3EnableError, user, isAuthenticated } = useMoralis();
   const [tradeOpen, setTradeOpen] = useState(false);
   const [inter, setInter] = useState<NodeJS.Timeout>();
   
   // TODO: Make the following dynamic + into a hook after hackathon
-  const [poolAddress, setPoolAddress] = useState(process.env.CONTRACT_ADDRESS_DEV);
+  const [poolAddress, setPoolAddress] = useState(process.env.POOL_CONTRACT_ADDRESS_DEV);
   const [daiBalance, setDaiBalance] = useState(getDaiBalance());
+  const [coverBalance, setCoverBalance] = useState(getCoverBalance());
+  const [premBalance, setPremBalance] = useState(getPremBalance());
   const [expiry, setExpiry] = useState('N/A');
-  const [premium, setPremium] = useState(0);
-  const [coverage, setCoverage] = useState(0);
+  const [totalPremium, setTotalPremium] = useState('0');
+  const [totalCoverage, setTotalCoverage] = useState('0');
   useEffect(() => {
     (async () => {
       setError('');
@@ -78,9 +81,11 @@ const Pools = () => {
         const _premium = await contract.methods.premiumPool().call();
         const _coverage = await contract.methods.coveragePool().call();
         setExpiry(makeTimestampReadable(expiryInMS));
-        setPremium(_premium);
-        setCoverage(_coverage);
+        setTotalPremium(`${formatUnits(_premium, 18)} DAI`);
+        setTotalCoverage(`${formatUnits(_coverage, 18)} DAI`);
         setDaiBalance(getDaiBalance());
+        setCoverBalance(getCoverBalance());
+        setPremBalance(getPremBalance());
       } catch (e) {
         setError(e);
         console.log("Error", e)
@@ -96,11 +101,13 @@ const Pools = () => {
   }
   const buyCover = async (premium: number) => {
     const contract = new web3.eth.Contract(pool, poolAddress);
-    return await contract.methods.buyCoverage(premium).send({ from: user.get('ethAddress') });
+    await contract.methods.buyCoverage(premium).send({ from: user.get('ethAddress') });
+    await updateBalances();
   }
   const sellCover = async (coverage: number) => {
     const contract = new web3.eth.Contract(pool, poolAddress);
-    return await contract.methods.sellCoverage(coverage).send({ from: user.get('ethAddress') });
+    await contract.methods.sellCoverage(coverage).send({ from: user.get('ethAddress') });
+    await updateBalances();
   }
 
   return (
@@ -112,16 +119,16 @@ const Pools = () => {
         columns={[
           { title: "Pool", field: "pool", cellStyle: { fontWeight: 500, width: '20%' }, disableClick: true },
           { title: "Expiry", field: "expiry", cellStyle: { width: '30%' } },
-          { title: "Premium", field: "premium", cellStyle: { width: '10%' } },
-          { title: "Coverage", field: "coverage", cellStyle: { width: '10%' } },
+          { title: "Coverage Pool", field: "totalCoverage", cellStyle: { width: '15%' } },
+          { title: "Premium Pool", field: "totalPremium", cellStyle: { width: '15%' } },
           { title: "", field: "action", cellStyle: { width: '20%' } }
         ]}
         data={[
           { 
             pool: "Maple", 
             expiry: expiry, 
-            premium: premium, 
-            coverage: coverage, 
+            totalCoverage: totalCoverage, 
+            totalPremium: totalPremium, 
             action: (
               <Button 
                 className={classes.button} 
@@ -149,8 +156,10 @@ const Pools = () => {
       open={tradeOpen} 
       onClose={() => setTradeOpen(false)}
       daiBalance={daiBalance}
-      coverage={coverage}
-      premium={premium}
+      coverBalance={coverBalance}
+      premBalance={premBalance}
+      totalCoverage={totalCoverage}
+      totalPremium={totalPremium}
       expiry={expiry}
       buyCover={buyCover}
       sellCover={sellCover}

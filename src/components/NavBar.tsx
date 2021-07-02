@@ -53,7 +53,7 @@ const useStyles = makeStyles((theme) => ({
 const NavBar = () => {
   const classes = useStyles();
   const { user, isAuthenticated, logout } = useMoralis();
-  const { getDaiBalance } = useAccount();
+  const { getDaiBalance, getCoverBalance, getPremBalance } = useAccount();
   const router = useRouter();
   const [connectWalletOpen, setConnectWalletOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -95,6 +95,12 @@ const NavBar = () => {
               </Typography>
               <Typography color='textSecondary' variant='body2'>
                 {getDaiBalance()} DAI
+              </Typography>
+              <Typography color='textSecondary' variant='body2'>
+                {getCoverBalance()} Cover
+              </Typography>
+              <Typography color='textSecondary' variant='body2'>
+                {getPremBalance()} Prem
               </Typography>
             </CardContent>
           </Card>
@@ -149,7 +155,7 @@ const NavBar = () => {
                   <Typography 
                     className={classes.textButton} 
                     style={{ 
-                      fontWeight: router.asPath === "/dashboard" ? 800 : 400,
+                      fontWeight: router.asPath === "/dashboard" ? 500 : 400,
                       opacity: router.asPath === "/dashboard" && 1
                     }} 
                     variant="body1"

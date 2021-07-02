@@ -18,7 +18,9 @@ Add .env file
 ```bash
   MORALIS_APP_ID=<App_ID>
   MORALIS_SERVER_URL=<Server_URL>
-  CONTRACT_ADDRESS_DEV=<Pool_Contract_Address>
+  POOL_CONTRACT_ADDRESS_DEV=<Pool_Contract_Address>
+  PREM_TOKEN_ADDRESSS_DEV=<Prem_Token_Contract_Address>
+  COVER_TOKEN_ADDRESSS_DEV=<Cover_Token_Contract_Address>
 ```
 
 Run dev server 
