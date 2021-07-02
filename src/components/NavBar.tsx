@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMoralis } from "react-moralis";
 import { useAccount } from '@contexts/AccountContext'
-import { formatUnits } from "@ethersproject/units";
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -95,7 +94,7 @@ const NavBar = () => {
                 Balance
               </Typography>
               <Typography color='textSecondary' variant='body2'>
-                {formatUnits(getDaiBalance(), 18)} DAI
+                {getDaiBalance()} DAI
               </Typography>
             </CardContent>
           </Card>
@@ -159,7 +158,7 @@ const NavBar = () => {
                   </Typography>
                 </Link>
                 <Typography color='textSecondary' variant='body2'>
-                  {formatUnits(getDaiBalance(), 18)} DAI
+                  {getDaiBalance()} DAI
                 </Typography>
                 <Chip
                   color="default"

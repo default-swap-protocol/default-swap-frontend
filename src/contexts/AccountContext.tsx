@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useMoralis } from 'react-moralis'
+import { formatUnits } from "@ethersproject/units";
 import BalanceHelper from '@utils/balanceHelper';
 
 const AccountContext = React.createContext<ContextProps | null>(null);
@@ -22,7 +23,7 @@ export const AccountProvider = ({ children }) => {
     (async () => {
       if (isAuthenticated) {
         const balance = await BalanceHelper.getERC20TokenBalance('DAI');
-        _setDaiBalance(balance.balance);
+        _setDaiBalance(formatUnits(balance.balance, 18));
       }
     })();
   }, [isAuthenticated])  
