@@ -30,9 +30,9 @@ export const useAccount = () => {
 // Context for tracking account info and balances
 export const AccountProvider = ({ children }) => {
   const { web3, isWeb3Enabled, enableWeb3, user, isAuthenticated } = useMoralis();
-  const [_daiBalance, _setDaiBalance] = useState('0.0');
-  const [_coverBalance, _setCoverBalance] = useState('0.0'); // TODO: extend to different pools' cover tokens
-  const [_premBalance, _setPremBalance] = useState('0.0');
+  const [_daiBalance, _setDaiBalance] = useState('0');
+  const [_coverBalance, _setCoverBalance] = useState('0'); // TODO: extend to different pools' cover tokens
+  const [_premBalance, _setPremBalance] = useState('0');
 
   useEffect(() => {
     (async () => {
