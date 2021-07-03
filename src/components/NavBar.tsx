@@ -39,6 +39,7 @@ const useStyles = makeStyles((theme) => ({
     '&:hover': {
       cursor: 'pointer',
     },
+    objectFit: 'cover'
   },
   options: {
     display: 'flex',
@@ -120,7 +121,7 @@ const NavBar = () => {
       <Container maxWidth='lg'>
         <Toolbar disableGutters variant="dense" className={classes.toolBar}>
           <Link href="/" passHref>
-            <Image unoptimized src="/logo-dark.png" alt="" className={classes.logo} height="50px" width="100px" objectFit="contain" />
+            <Image src="/logo-dark.png" alt="" className={classes.logo} height="35px" width="140px" unoptimized />
           </Link>
           {/* <div className={classes.options}>
             <Link href="/buy" passHref>
@@ -163,10 +164,8 @@ const NavBar = () => {
                     My Dashboard
                   </Typography>
                 </Link>
-                <Typography color='textSecondary' variant='body2'>
-                  {getDaiBalance()} DAI
-                </Typography>
                 <Chip
+                  variant="outlined"
                   color="default"
                   onClick={handleProfileMenuOpen}
                   icon={
