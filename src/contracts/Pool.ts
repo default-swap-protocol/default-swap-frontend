@@ -38,6 +38,12 @@ export const pool = [
         "internalType": "address",
         "name": "claimer",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_coverageAmount",
+        "type": "uint256"
       }
     ],
     "name": "CoverageClaimed",
@@ -51,6 +57,12 @@ export const pool = [
         "internalType": "address",
         "name": "withdrawer",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_premiumAmount",
+        "type": "uint256"
       }
     ],
     "name": "PremiumWithdrawn",
@@ -83,7 +95,13 @@ export const pool = [
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_coverTokenAmount",
+        "type": "uint256"
+      }
+    ],
     "name": "claimCoverage",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -221,7 +239,13 @@ export const pool = [
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_premTokenAmount",
+        "type": "uint256"
+      }
+    ],
     "name": "withdrawPremium",
     "outputs": [],
     "stateMutability": "nonpayable",
