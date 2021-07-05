@@ -92,7 +92,7 @@ const useStyles = makeStyles((theme) => ({
 // Presentational component for handling trades
 const TradePopup = (props) => {
   const classes = useStyles();
-  const { open, onClose, daiBalance, coverBalance, premBalance, totalCoverage, totalPremium, expiry, buyCover, sellCover, approveCover, approvePrem } = props;
+  const { open, onClose, poolContractAddress, daiBalance, coverBalance, premBalance, totalCoverage, totalPremium, expiry, buyCover, sellCover, approveDai, approveCover, approvePrem } = props;
   const [tab, setTab] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
@@ -116,16 +116,15 @@ const TradePopup = (props) => {
     let message = '';
     try {
       if (tab === 0) {
-        const approved = approveCover(+priceInput);
+        const approved = await approveDai(poolContractAddress, +priceInput);
         if (approved) {
           await buyCover(priceInput);
         } else {
           return setError('Failed to approve transaction');
         }
-        await buyCover(priceInput);
         message = `You successfully exchanged ${priceInput} DAI for ${priceOutput} Cover tokens`;
       } else {
-        const approved = approvePrem(+priceInput);
+        const approved = await approveDai(poolContractAddress, +priceInput);
         if (approved) {
           await sellCover(priceInput);
         } else {
@@ -183,22 +182,22 @@ const TradePopup = (props) => {
                 { daiBalance } DAI
               </Typography>
               <Typography variant='subtitle2'>
-                { coverBalance } Cover tokens
+                { coverBalance } COVER
               </Typography>
               <Typography variant='subtitle2'>
-                { premBalance } Prem tokens
+                { premBalance } PREM
               </Typography>
             </div>
             <div className={classes.listItem}>
               <Typography variant='body2'>Total Supplied Coverage</Typography>
               <Typography variant='subtitle2'>
-                { totalCoverage }
+                { totalCoverage } DAI
               </Typography>
             </div>
             <div className={classes.listItem}>
               <Typography variant='body2'>Total Available Premium</Typography>
               <Typography variant='subtitle2'>
-                { totalPremium }
+                { totalPremium } DAI
               </Typography>
             </div>
             <div className={classes.listItem}>
@@ -224,12 +223,12 @@ const TradePopup = (props) => {
               <CloseIcon fontSize='small' />
             </IconButton>
           </div>
-          { daiBalance === '0.0'
+          { daiBalance !== '0'
             ?
               <>
                 <DialogContent>
                   <Typography gutterBottom variant='subtitle2'>
-                    Amount to  { tab === 0 ? 'Pay' : 'Stake' }
+                    Amount to  { tab === 0 ? 'Pay' : 'Supply' }
                   </Typography>
                   <TextField 
                     type='number'
@@ -250,7 +249,7 @@ const TradePopup = (props) => {
                 <DialogContent>
                   <Typography gutterBottom variant='subtitle2'>
                     { tab === 0 ? 'Cost' : 'You will Receive' }
-                  </Typography>
+                </Typography>
                   <TextField 
                     disabled
                     className={classes.textField} 
@@ -280,7 +279,7 @@ const TradePopup = (props) => {
                     onClick={executeTrade}
                     disabled={!priceInput || priceInput === '0'}
                   >
-                    { tab === 0 ? 'Buy Cover' : 'Stake' }
+                    { tab === 0 ? 'Buy coverage' : 'Supply coverage' }
                   </Button> 
                 </DialogActions>
               </>

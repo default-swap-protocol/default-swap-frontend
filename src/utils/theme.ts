@@ -15,9 +15,7 @@ customShadows[3] = '0 35px 60px -15px rgba(0, 0, 0, 0.3)';
 const theme = createMuiTheme({
   palette: {
     primary: {
-      // light: '#FAFFF9',
       main: '#3531a2',
-      // dark: '#23614E'
     },
     text: {
       primary: '#1F2433',
@@ -39,9 +37,14 @@ const theme = createMuiTheme({
   },
   shadows: customShadows as Shadows,
   props: {
+    MuiAppBar: {
+      style: {
+        backgroundColor: 'default'
+      }
+    },
     MuiButton: {
       style: {
-        borderRadius: '5px',
+        borderRadius: '10px',
         paddingTop: '8px',
         paddingBottom: '8px',
         textTransform: 'none'
@@ -53,19 +56,19 @@ const theme = createMuiTheme({
     },
     MuiDialog: {
       style: {
-        borderRadius: '5px'
+        borderRadius: '10px'
       }
     },
     MuiCard: {
       style: {
         backgroundColor: 'white',
-        borderRadius: '5px'
+        borderRadius: '10px'
       }
     },
     MuiPaper: {
       style: {
         backgroundColor: 'white',
-        borderRadius: '5px'
+        borderRadius: '10px'
       }
     },
     MuiTab: {
@@ -84,7 +87,7 @@ const theme = createMuiTheme({
     },
     MuiListItem: {
       root: {
-        borderRadius: '5px',
+        borderRadius: '10px',
         '&$selected': {
           backgroundColor: '#2E8C76',
           '& p': {

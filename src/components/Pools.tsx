@@ -1,20 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useMoralis } from 'react-moralis'
-import { formatUnits } from "@ethersproject/units";
 import { useAccount } from '@contexts/AccountContext'
 import { Button, Container } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles'
 import MaterialTable from 'material-table'
-import moment from 'moment'
 
-import { pool, sampleMapleLoanContract } from "@contracts/index" // TODO: Make dynamic after demo
+import { pool } from "@contracts/index" // TODO: Make dynamic after demo
+import usePoolInfo from '@hooks/usePoolInfo'
 import TradePopup from '@components/TradePopup'
+import ClaimPopup from '@components/ClaimPopup'
 import ErrorPopup from '@components/ErrorPopup'
-import theme from '@utils/theme';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     padding: theme.spacing(3),
+    '&:nth-child(1) .Component-horizontalScrollContainer-26': {
+      borderRadius: theme.spacing(1)
+    }
   },
   item: {
     padding: theme.spacing(1)
@@ -52,73 +54,37 @@ const useStyles = makeStyles((theme) => ({
 // Table of coverage pools
 const Pools = () => {
   const classes = useStyles();
-  const { getDaiBalance, getCoverBalance, getPremBalance, updateBalances, approveCover, approvePrem } = useAccount();
+  const { updateBalances, approveDai, approveCover, approvePrem } = useAccount();
   const [error, setError] = useState('');
-  const { web3, enableWeb3, isWeb3Enabled, web3EnableError, user, isAuthenticated } = useMoralis();
+  const { web3, user } = useMoralis();
+  const [selectedPoolAddress, setSelectedPoolAddress] = useState(process.env.POOL_CONTRACT_ADDRESS_DEV);
+  const { daiBalance, coverBalance, premBalance, coverTotalSupply, premTotalSupply, expiry, isExpired, totalPremium, totalCoverage, loanDefaulted} = usePoolInfo(process.env.POOL_CONTRACT_ADDRESS_DEV);
+
   const [tradeOpen, setTradeOpen] = useState(false);
-  const [inter, setInter] = useState<NodeJS.Timeout>();
+  const [claimOpen, setClaimOpen] = useState(false);
   
-  // TODO: Make the following dynamic + into a hook after hackathon
-  const [poolAddress, setPoolAddress] = useState(process.env.POOL_CONTRACT_ADDRESS_DEV);
-  const [daiBalance, setDaiBalance] = useState(getDaiBalance());
-  const [coverBalance, setCoverBalance] = useState(getCoverBalance());
-  const [premBalance, setPremBalance] = useState(getPremBalance());
-  const [expiry, setExpiry] = useState('N/A');
-  const [totalPremium, setTotalPremium] = useState('0');
-  const [totalCoverage, setTotalCoverage] = useState('0');
-  const [loanDefaulted, setLoanDefaulted] = useState(false);
-  useEffect(() => {
-    (async () => {
-      setError('');
-      updatePool();
-      if (!inter) {
-        const id = setInterval(async () => {
-          updatePool();
-        }, 13000); // TODO: Update this to subscribing to block + update only when block is updated
-        setInter(id);
-      }
-    })();
-  }, [isAuthenticated, isWeb3Enabled]);
-  const updatePool = async () => {
-    enableWeb3();
-    if (isAuthenticated && isWeb3Enabled && web3?.currentProvider) {    
-      try {
-        const contract = new web3.eth.Contract(pool, poolAddress);
-        const expiryInSeconds = await contract.methods.expirationTimestamp().call();
-        const _premium = await contract.methods.premiumPool().call();
-        const _coverage = await contract.methods.coveragePool().call();
-        
-        const loanContractAddress = await contract.methods.sampleMapleLoanContract().call()
-        const loanContract = new web3.eth.Contract(sampleMapleLoanContract, loanContractAddress);
-        const _loanDefaulted = await loanContract.methods.loanDefaulted().call();
-        setExpiry(makeTimestampReadable(expiryInSeconds * 1000));
-        setTotalPremium(`${formatUnits(_premium, 18)} DAI`);
-        setTotalCoverage(`${formatUnits(_coverage, 18)} DAI`);
-        setDaiBalance(getDaiBalance());
-        setCoverBalance(getCoverBalance());
-        setPremBalance(getPremBalance());
-        setLoanDefaulted(_loanDefaulted);
-      } catch (e) {
-        setError(e);
-        console.log("Error", e)
-      }
-    } else {
-      setInter(undefined)
-    }
-  }
-  const makeTimestampReadable = (expiryInMS: number): string => {
-    const expDateString = new Date(+expiryInMS).toString();
-    const expDateTimezone = new Date(+expiryInMS).toLocaleTimeString('en-us',{timeZoneName:'short'}).split(' ')[2];
-    return `${moment(expDateString).format('MMMM d, YYYY h:mma')} ${expDateTimezone}`;
-  }
   const buyCover = async (premium: number) => {
-    const contract = new web3.eth.Contract(pool, poolAddress);
-    await contract.methods.buyCoverage(premium).send({ from: user.get('ethAddress') });
+    const contract = new web3.eth.Contract(pool, selectedPoolAddress);
+    const amountToBuy = web3.utils.toBN(web3.utils.toWei(premium.toString(), 'ether'));
+    await contract.methods.buyCoverage(amountToBuy).send({ from: user.get('ethAddress') });
     await updateBalances();
   }
   const sellCover = async (coverage: number) => {
-    const contract = new web3.eth.Contract(pool, poolAddress);
-    await contract.methods.sellCoverage(coverage).send({ from: user.get('ethAddress') });
+    const contract = new web3.eth.Contract(pool, selectedPoolAddress);
+    const amountToSell = web3.utils.toBN(web3.utils.toWei(coverage.toString(), 'ether'))
+    await contract.methods.sellCoverage(amountToSell).send({ from: user.get('ethAddress') });
+    await updateBalances();
+  }
+  const claimCoverage = async (coverTokenBalance: number) => {
+    const contract = new web3.eth.Contract(pool, selectedPoolAddress);
+    const amountToClaim = web3.utils.toBN(web3.utils.toWei(coverTokenBalance.toString(), 'ether'));
+    await contract.methods.claimCoverage(amountToClaim).send({ from: user.get('ethAddress') });
+    await updateBalances();
+  }
+  const withdrawPremium = async (premiumTokenBalance: number) => {
+    const contract = new web3.eth.Contract(pool, selectedPoolAddress);
+    const amountToWithdraw = web3.utils.toBN(web3.utils.toWei(premiumTokenBalance.toString(), 'ether'));
+    await contract.methods.withdrawPremium(amountToWithdraw).send({ from: user.get('ethAddress') });
     await updateBalances();
   }
 
@@ -126,15 +92,14 @@ const Pools = () => {
     <Container className={classes.root} maxWidth="lg">
       <MaterialTable
         style={{
-          borderRadius: '8px'
+          borderRadius: '10px'
         }}
         columns={[
           { title: "Pool", field: "pool", cellStyle: { fontWeight: 500, width: '18%' }, disableClick: true },
           { title: "Expiry", field: "expiry", cellStyle: { width: '18%' } },
           { title: "Defaulted", field: "defaulted", cellStyle: { width: '0%' } },
-          { title: "Total Purchased", field: "totalCoverage", cellStyle: { width: '15%' } },
-          { title: "Total Supplied", field: "totalPremium", cellStyle: { width: '14%' } },
-          { title: "Balance", field: "balance", cellStyle: { width: '5%' } },
+          { title: "Total Supplied", field: "totalCoverage", cellStyle: { width: '16%' } },
+          { title: "Total Premiums", field: "totalPremium", cellStyle: { width: '16%' } },
           { title: "", field: "action", cellStyle: { width: '18%' } }
         ]}
         data={[
@@ -142,12 +107,13 @@ const Pools = () => {
             pool: "Maple default swaps", 
             expiry: expiry, 
             defaulted: loanDefaulted,
-            totalCoverage: totalCoverage, 
-            totalPremium: totalPremium, 
-            balance: `${coverBalance} Cover ${premBalance} Prem`,
+            totalCoverage: `${totalCoverage} DAI`, 
+            totalPremium: `${totalPremium} DAI`, 
+            balance: `${coverBalance} COVER ${premBalance} PREM`,
             action: (
               <div className={classes.row}>
                 <Button 
+                  disabled={isExpired || loanDefaulted}
                   className={classes.button} 
                   color='primary' 
                   variant='outlined'
@@ -158,11 +124,12 @@ const Pools = () => {
                   Trade
                 </Button> 
                 <Button 
+                  disabled={!isExpired && !loanDefaulted}
                   className={classes.button} 
                   color='primary' 
                   variant='contained'
                   onClick={() => {
-                    setTradeOpen(true)
+                    setClaimOpen(true)
                   }}
                 >
                   Claim
@@ -173,10 +140,9 @@ const Pools = () => {
           { 
             pool: "Goldfinch default swaps", 
             expiry: 'July 8, 2021 3:22pm EDT', 
-            defaulted: loanDefaulted,
+            defaulted: false,
             totalCoverage: '6508.15 DAI', 
             totalPremium: '21915.10 DAI', 
-            balance: `0.0 Cover 0.0 Prem`,
             action: (
               <div className={classes.row}>
                 <Button 
@@ -195,7 +161,7 @@ const Pools = () => {
                   color='primary' 
                   variant='contained'
                   onClick={() => {
-                    setTradeOpen(true)
+                    setClaimOpen(true)
                   }}
                 >
                   Claim
@@ -206,10 +172,9 @@ const Pools = () => {
           { 
             pool: "Aave default swaps", 
             expiry: 'July 10, 2021 10:42pm EDT', 
-            defaulted: loanDefaulted,
+            defaulted: false,
             totalCoverage: '7508.91 DAI', 
             totalPremium: '36352.24 DAI', 
-            balance: `0.0 Cover 0.0 Prem`,
             action: (
               <div className={classes.row}>
                 <Button 
@@ -228,7 +193,7 @@ const Pools = () => {
                   color='primary' 
                   variant='contained'
                   onClick={() => {
-                    setTradeOpen(true)
+                    setClaimOpen(true)
                   }}
                 >
                   Claim
@@ -239,13 +204,13 @@ const Pools = () => {
           { 
             pool: "Uniswap liquidation swaps", 
             expiry: 'July 12, 2021 10:42pm EDT', 
-            defaulted: loanDefaulted,
+            defaulted: false,
             totalCoverage: '10309.20 DAI', 
             totalPremium: '80395.85 DAI', 
-            balance: `0.0 Cover 0.0 Prem`,
             action: (
               <div className={classes.row}>
                 <Button 
+                  disabled
                   className={classes.button} 
                   color='primary' 
                   variant='outlined'
@@ -261,7 +226,7 @@ const Pools = () => {
                   color='primary' 
                   variant='contained'
                   onClick={() => {
-                    setTradeOpen(true)
+                    setClaimOpen(true)
                   }}
                 >
                   Claim
@@ -285,6 +250,7 @@ const Pools = () => {
     <TradePopup 
       open={tradeOpen} 
       onClose={() => setTradeOpen(false)}
+      poolContractAddress={selectedPoolAddress}
       daiBalance={daiBalance}
       coverBalance={coverBalance}
       premBalance={premBalance}
@@ -293,6 +259,23 @@ const Pools = () => {
       expiry={expiry}
       buyCover={buyCover}
       sellCover={sellCover}
+      approveDai={approveDai}
+      approveCover={approveCover}
+      approvePrem={approvePrem}
+    />
+    <ClaimPopup
+      open={claimOpen}
+      onClose={() => setClaimOpen(false)}
+      poolContractAddress={selectedPoolAddress}
+      defaulted={loanDefaulted}
+      coverBalance={coverBalance}
+      premBalance={premBalance}
+      coverTotalSupply={coverTotalSupply}
+      premTotalSupply={premTotalSupply}
+      totalCoverage={totalCoverage}
+      totalPremium={totalPremium}
+      claimCoverage={claimCoverage}
+      withdrawPremium={withdrawPremium}
       approveCover={approveCover}
       approvePrem={approvePrem}
     />
