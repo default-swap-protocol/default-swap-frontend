@@ -10,6 +10,7 @@ import usePoolInfo from '@hooks/usePoolInfo'
 import TradePopup from '@components/TradePopup'
 import ClaimPopup from '@components/ClaimPopup'
 import ErrorPopup from '@components/ErrorPopup'
+import theme from '@utils/theme';
 
 const useStyles = makeStyles((theme) => ({
   root: {
