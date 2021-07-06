@@ -4,7 +4,7 @@ import { useAccount } from '@contexts/AccountContext'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Image from 'next/image'
-import { AppBar, Button, Card, CardHeader, CardContent, Chip, Container, Menu, MenuItem, Toolbar, Typography } from '@material-ui/core'
+import { AppBar, Button, Card, CardContent, Chip, Container, Menu, MenuItem, Toolbar, Typography } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles';
 
 import ConnectWalletPopup from '@components/ConnectWalletPopup'
@@ -39,6 +39,7 @@ const useStyles = makeStyles((theme) => ({
     '&:hover': {
       cursor: 'pointer',
     },
+    objectFit: 'cover'
   },
   options: {
     display: 'flex',
@@ -53,7 +54,7 @@ const useStyles = makeStyles((theme) => ({
 const NavBar = () => {
   const classes = useStyles();
   const { user, isAuthenticated, logout } = useMoralis();
-  const { getDaiBalance, getCoverBalance, getPremBalance } = useAccount();
+  const { getDaiBalance } = useAccount();
   const router = useRouter();
   const [connectWalletOpen, setConnectWalletOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -93,14 +94,8 @@ const NavBar = () => {
               <Typography gutterBottom variant='body1'>
                 Balance
               </Typography>
-              <Typography color='textSecondary' variant='body2'>
-                {getDaiBalance()} DAI
-              </Typography>
-              <Typography color='textSecondary' variant='body2'>
-                {getCoverBalance()} Cover
-              </Typography>
-              <Typography color='textSecondary' variant='body2'>
-                {getPremBalance()} Prem
+              <Typography color='textSecondary' variant='body2' style={{ display: 'flex', alignItems: 'center', paddingTop: '8px'}}>
+                <Image src='/dai.svg' alt='dai' width='35px' height='22px' unoptimized /> {getDaiBalance()} DAI
               </Typography>
             </CardContent>
           </Card>
@@ -120,34 +115,8 @@ const NavBar = () => {
       <Container maxWidth='lg'>
         <Toolbar disableGutters variant="dense" className={classes.toolBar}>
           <Link href="/" passHref>
-            <Image unoptimized src="/logo-dark.png" alt="" className={classes.logo} height="50px" width="100px" objectFit="contain" />
+            <Image src="/logo-dark.png" alt="" className={classes.logo} height="35px" width="140px" unoptimized />
           </Link>
-          {/* <div className={classes.options}>
-            <Link href="/buy" passHref>
-              <Typography 
-                className={classes.textButton} 
-                style={{ 
-                  fontWeight: router.asPath === "/buy" ? 800 : 400,
-                  opacity: router.asPath === "/buy" && 1
-                }} 
-                variant="body1"
-              >
-                Buy Cover
-              </Typography>
-            </Link>
-            <Link href="/sell" passHref>
-              <Typography 
-                className={classes.textButton} 
-                style={{ 
-                  fontWeight: router.asPath === "/sell" ? 800 : 400,
-                  opacity: router.asPath === "/sell" && 1
-                }} 
-                variant="body1"
-              >
-                Sell Swaps
-              </Typography>
-            </Link>
-          </div> */}
           <div className={classes.options}>
             { isAuthenticated && (
               <>
@@ -163,10 +132,8 @@ const NavBar = () => {
                     My Dashboard
                   </Typography>
                 </Link>
-                <Typography color='textSecondary' variant='body2'>
-                  {getDaiBalance()} DAI
-                </Typography>
                 <Chip
+                  variant="outlined"
                   color="default"
                   onClick={handleProfileMenuOpen}
                   icon={

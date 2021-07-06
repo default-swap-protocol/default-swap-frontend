@@ -31,6 +31,9 @@
       ],
       "@contracts/*": [
         "src/contracts/*"
+      ],
+      "@hooks/*": [
+        "src/hooks/*"
       ]
     }
   },

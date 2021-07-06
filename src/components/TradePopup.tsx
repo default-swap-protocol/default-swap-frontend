@@ -34,7 +34,7 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.up('md')]: {
       height: 'max-content',
       width: 'max-content',
-      minWidth: theme.spacing(72),
+      minWidth: theme.spacing(80),
       maxHeight: '90%',
       overflowY: 'scroll',
     },
@@ -47,10 +47,6 @@ const useStyles = makeStyles((theme) => ({
   fields: {
     display: 'flex',
     justifyContent: 'space-between'
-  },
-  actions: {
-    display: 'flex',
-    flexDirection: 'row',
   },
   button: {
     width: '100%',
@@ -79,13 +75,24 @@ const useStyles = makeStyles((theme) => ({
   },
   listItem: {
     margin: theme.spacing(1, 3)
+  },
+  info: {
+    float: 'left', 
+    width: '40%',
+    marginBottom: theme.spacing(2),
+    marginLeft: theme.spacing(-3)
+  },
+  actions: {
+    float: 'right', 
+    width: '59%',
+    marginTop: theme.spacing(-1)
   }
 }));
 
 // Presentational component for handling trades
 const TradePopup = (props) => {
   const classes = useStyles();
-  const { open, onClose, daiBalance, coverBalance, premBalance, totalCoverage, totalPremium, expiry, buyCover, sellCover } = props;
+  const { open, onClose, poolContractAddress, daiBalance, coverBalance, premBalance, totalCoverage, totalPremium, expiry, buyCover, sellCover, approveDai, approveCover, approvePrem } = props;
   const [tab, setTab] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
@@ -109,11 +116,21 @@ const TradePopup = (props) => {
     let message = '';
     try {
       if (tab === 0) {
-        await buyCover(priceInput);
-        message = `You successfully exchanged ${priceInput} DAI for ${costRef.current.value} Cover tokens`;
+        const approved = await approveDai(poolContractAddress, +priceInput);
+        if (approved) {
+          await buyCover(priceInput);
+        } else {
+          return setError('Failed to approve transaction');
+        }
+        message = `You successfully exchanged ${priceInput} DAI for ${priceOutput} Cover tokens`;
       } else {
-        await sellCover(priceInput);
-        message = `You successfully staked ${priceInput} DAI in exchange for ${costRef.current.value} Prem tokens`;
+        const approved = await approveDai(poolContractAddress, +priceInput);
+        if (approved) {
+          await sellCover(priceInput);
+        } else {
+          return setError('Failed to approve transaction');
+        }
+        message = `You successfully staked ${priceInput} DAI in exchange for ${priceOutput} Prem tokens`;
       };
     } catch (e) {
       const err = JSON.stringify(JSON.stringify(e.message));
@@ -145,7 +162,7 @@ const TradePopup = (props) => {
     >
       <DialogTitle>
         <Typography gutterBottom variant='h6'>
-          Maple 
+          Maple default swaps
         </Typography>
         <Typography gutterBottom variant='body2'>
           { tab === 0
@@ -156,8 +173,8 @@ const TradePopup = (props) => {
           }
         </Typography>
       </DialogTitle>
-      <div>
-        <div style={{ float: 'left', width: '40%'}}>
+      <DialogContent>
+        <div className={classes.info}>
           <List disablePadding subheader={<li />} className={classes.list}>
             <div className={classes.listItem}>
               <Typography variant='body2'>Balance</Typography>
@@ -165,22 +182,22 @@ const TradePopup = (props) => {
                 { daiBalance } DAI
               </Typography>
               <Typography variant='subtitle2'>
-                { coverBalance } Cover tokens
+                { coverBalance } COVER
               </Typography>
               <Typography variant='subtitle2'>
-                { premBalance } Prem tokens
+                { premBalance } PREM
               </Typography>
             </div>
             <div className={classes.listItem}>
               <Typography variant='body2'>Total Supplied Coverage</Typography>
               <Typography variant='subtitle2'>
-                { totalCoverage }
+                { totalCoverage } DAI
               </Typography>
             </div>
             <div className={classes.listItem}>
               <Typography variant='body2'>Total Available Premium</Typography>
               <Typography variant='subtitle2'>
-                { totalPremium }
+                { totalPremium } DAI
               </Typography>
             </div>
             <div className={classes.listItem}>
@@ -191,11 +208,11 @@ const TradePopup = (props) => {
             </div>
           </List>
         </div>
-        <div style={{ float: 'right', width: '60%'}}>
+        <div className={classes.actions}>
           <div className={classes.content}>
             <Tabs indicatorColor="primary" value={tab} onChange={(e, val) => setTab(val)}>
-              <Tab disableRipple label="Buy Cover" />
-              <Tab disableRipple label="Stake" />
+              <Tab disableRipple label="Buy coverage" />
+              <Tab disableRipple label="Supply coverage" />
             </Tabs>
             <IconButton 
               aria-label="close" 
@@ -206,64 +223,74 @@ const TradePopup = (props) => {
               <CloseIcon fontSize='small' />
             </IconButton>
           </div>
-          <DialogContent>
-            <Typography gutterBottom variant='subtitle2'>
-              Amount to  { tab === 0 ? 'Buy' : 'Stake' }
-            </Typography>
-            <TextField 
-              type='number'
-              className={classes.textField} 
-              placeholder={'0.0'}
-              variant='outlined' 
-              InputProps={{
-                endAdornment: <InputAdornment position="end">{ tab === 0 ? 'COVER' : 'DAI' }</InputAdornment>,
-              }}
-              onChange={(e) => {
-                const val = `${Math.abs(+e.target.value)}`;
-                setPriceInput(val);
-                setPriceOutput(val); // TODO: replace this with COVER / PREM x DAI conversion
-              }}
-              inputRef={quantityRef}
-            />
-          </DialogContent>
-          <DialogContent>
-            <Typography gutterBottom variant='subtitle2'>
-              { tab === 0 ? 'Cost' : 'You will Receive' }
-            </Typography>
-            <TextField 
-              disabled
-              className={classes.textField} 
-              placeholder={'0.0'}
-              variant='outlined' 
-              value={priceOutput}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">{ tab === 0 ? 'DAI' : 'PREM' }</InputAdornment>,
-              }}
-              inputRef={costRef}
-            />
-            <Typography variant='subtitle2'>
-             { tab === 0 
-              ? 
-                '1 COVER = 1 DAI' 
-              : 
-                '1 PREM = 1 DAI'
-              }
-              
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              className={classes.button} 
-              color='primary' 
-              variant='contained'
-              onClick={executeTrade}
-              disabled={!priceInput || priceInput === '0'}
-            >
-              { tab === 0 ? 'Buy Cover' : 'Stake' }
-            </Button> 
-          </DialogActions>
+          { daiBalance !== '0'
+            ?
+              <>
+                <DialogContent>
+                  <Typography gutterBottom variant='subtitle2'>
+                    Amount to  { tab === 0 ? 'Pay' : 'Supply' }
+                  </Typography>
+                  <TextField 
+                    type='number'
+                    className={classes.textField} 
+                    placeholder={'0.0'}
+                    variant='outlined' 
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">DAI</InputAdornment>,
+                    }}
+                    onChange={(e) => {
+                      const val = `${Math.abs(+e.target.value)}`;
+                      setPriceInput(val);
+                      setPriceOutput(val); // TODO: replace this with COVER / PREM x DAI conversion
+                    }}
+                    inputRef={quantityRef}
+                  />
+                </DialogContent>
+                <DialogContent>
+                  <Typography gutterBottom variant='subtitle2'>
+                    { tab === 0 ? 'Cost' : 'You will Receive' }
+                </Typography>
+                  <TextField 
+                    disabled
+                    className={classes.textField} 
+                    placeholder={'0.0'}
+                    variant='outlined' 
+                    value={priceOutput}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">{ tab === 0 ? 'COVER' : 'PREM' }</InputAdornment>,
+                    }}
+                    inputRef={costRef}
+                  />
+                  <Typography variant='subtitle2'>
+                  { tab === 0 
+                    ? 
+                      '1 COVER = 1 DAI' 
+                    : 
+                      '1 PREM = 1 DAI'
+                    }
+                    
+                  </Typography>
+                </DialogContent>
+                <DialogActions>
+                  <Button 
+                    className={classes.button} 
+                    color='primary' 
+                    variant='contained'
+                    onClick={executeTrade}
+                    disabled={!priceInput || priceInput === '0'}
+                  >
+                    { tab === 0 ? 'Buy coverage' : 'Supply coverage' }
+                  </Button> 
+                </DialogActions>
+              </>
+            :
+              <Typography style={{ textAlign: 'center' }} variant='body2'>
+                You don&apos;t have enough DAI to trade coverage
+              </Typography>
+          }
+          
         </div>
-      </div>
+      </DialogContent>
       <SuccessPopup
         handleClose={() => setSuccessMessage('')}
         message={successMessage}
