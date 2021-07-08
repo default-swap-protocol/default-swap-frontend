@@ -1,17 +1,25 @@
-import { useState, useEffect } from "react";
-import { useMoralis } from "react-moralis";
-import { formatUnits } from "@ethersproject/units";
-import { useAccount } from "@contexts/AccountContext";
-import { Container } from "@material-ui/core";
+import { useState } from "react";
+import Image from 'next/image'
+import { Card, Container, Typography } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 import MaterialTable from "material-table";
-import moment from "moment";
 
-import { pool } from "@contracts/index"; // TODO: Make dynamic after demo
+import usePoolInfo from '@hooks/usePoolInfo'
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    padding: theme.spacing(3)
+    padding: theme.spacing(3),
+    '&:nth-child(1) .Component-horizontalScrollContainer-26': {
+      borderRadius: theme.spacing(1)
+    }
+  },
+  card: {
+    padding: theme.spacing(3),
+    margin: theme.spacing(2, 0),
+    maxWidth: theme.spacing(20),
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   item: {
     padding: theme.spacing(1)
@@ -43,60 +51,31 @@ const useStyles = makeStyles((theme) => ({
 
 const DashboardTable = () => {
   const classes = useStyles();
-  const { getCoverBalance, getPremBalance } = useAccount();
-  const [error, setError] = useState("");
-  const { web3, enableWeb3, isWeb3Enabled, web3EnableError, isAuthenticated } =
-    useMoralis();
-  const [inter, setInter] = useState<NodeJS.Timeout>();
 
   // TODO: Make the following dynamic + into a hook after hackathon
   const [poolAddress, setPoolAddress] = useState(
     process.env.POOL_CONTRACT_ADDRESS_DEV
   );
-  const [coverBalance, setCoverBalance] = useState(getCoverBalance());
-  const [premBalance, setPremBalance] = useState(getPremBalance());
-  const [expiry, setExpiry] = useState("N/A");
-  useEffect(() => {
-    (async () => {
-      setError("");
-      updateDashboardTable();
-      if (!inter) {
-        const id = setInterval(async () => {
-          updateDashboardTable();
-        }, 13000); // TODO: Update this to subscribing to block + update only when block is updated
-        setInter(id);
-      }
-    })();
-  }, [isAuthenticated, isWeb3Enabled]);
-  const updateDashboardTable = async () => {
-    enableWeb3();
-    if (isAuthenticated && isWeb3Enabled && web3?.currentProvider) {
-      try {
-        const contract = new web3.eth.Contract(pool, poolAddress);
-        const expiryInMS = await contract.methods.expirationTimestamp().call();
-        setExpiry(makeTimestampReadable(expiryInMS));
-        const _coverTokenBalance = await getCoverBalance();
-        const _premTokenBalance = await getPremBalance();
-        setCoverBalance(`${formatUnits(_coverTokenBalance, 18)} COVER`);
-        setPremBalance(`${formatUnits(_premTokenBalance, 18)} PREM`);
-      } catch (e) {
-        setError(e);
-        console.log("Error", e);
-      }
-    } else {
-      setInter(undefined);
-    }
-  };
-  const makeTimestampReadable = (expiryInMS: number): string => {
-    const formattedTime = moment.unix(expiryInMS).format("MMMM Do YYYY, h:mm:ss a"); 
-    return formattedTime;
-  }
+  const { daiBalance, coverBalance, premBalance, expiry} = usePoolInfo(poolAddress);
 
   return (
-    <Container className={classes.root} maxWidth="lg">
+    <Container className={classes.root} maxWidth="md">
+      <Typography gutterBottom variant='h6'>
+        My Balance
+      </Typography>
+      <Card className={classes.card} elevation={2}>
+        <Image src='/dai.svg' width='35px' height='22px' unoptimized />
+        <Typography gutterBottom variant='body2'>
+          {`${daiBalance} DAI`}
+        </Typography>
+      </Card>
+      <Typography gutterBottom variant='h6'>
+        My Pools
+      </Typography>
       <MaterialTable
+        title={'My Balance'}
         style={{
-          borderRadius: "8px"
+          borderRadius: "10px"
         }}
         columns={[
           {
@@ -121,8 +100,8 @@ const DashboardTable = () => {
           {
             pool: "Maple",
             expiry: expiry,
-            coverBalance: coverBalance,
-            premBalance: premBalance
+            coverBalance: `${coverBalance} COVER`,
+            premBalance: `${premBalance} PREM`
           }
         ]}
         options={{

@@ -61,6 +61,25 @@ export const pool = [
       {
         "indexed": false,
         "internalType": "uint256",
+        "name": "_coverageAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CoverageWithdrawn",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "withdrawer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "_premiumAmount",
         "type": "uint256"
       }
@@ -242,11 +261,42 @@ export const pool = [
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "_coverageAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawCoverage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "_premTokenAmount",
         "type": "uint256"
       }
     ],
     "name": "withdrawPremium",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_premTokenAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_coverageAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawPremiumAndCoverage",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
